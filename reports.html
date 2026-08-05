@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frontier · 面料检测报告对比</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --accent:#D4A574;--accent-bg:rgba(212,165,116,0.10);
+  --cream:#F5F1EA;--white:#FFFFFF;
+  --text:#2C3E50;--text-mid:#4A5568;--text-soft:#94A3B8;
+  --border:#E2E8F0;--navy:#1F3A68;
+  --red:#B91C1C;--red-bg:#FEE2E2;
+  --green:#047857;--green-bg:#D1FAE5;
+  --amber:#B45309;--amber-bg:#FEF3C7;
+  --gray-bg:#F8F9FA;--spec-bg:#F1EDE4;
+}
+html,body{font-family:"Noto Sans SC","PingFang SC",sans-serif;background:var(--cream);color:var(--text);font-size:13px;line-height:1.6}
+
+.page-head{text-align:center;padding:28px 24px 20px;background:linear-gradient(180deg,var(--white) 0%,var(--cream) 100%);border-bottom:1px solid var(--border)}
+.page-head .meta{font-size:9px;letter-spacing:4px;color:var(--accent);font-weight:600;margin-bottom:6px}
+.page-head h1{font-family:"Cormorant Garamond",serif;font-size:32px;font-weight:600;color:var(--navy)}
+.page-head h1 em{font-style:italic;color:var(--accent)}
+
+.page{max-width:1400px;margin:0 auto;padding:20px 20px 60px}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:16px}
+.toolbar-label{font-size:10px;letter-spacing:1px;color:var(--text-soft)}
+.filter-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ftag{padding:4px 12px;border:1px solid var(--border);border-radius:14px;font-size:11px;cursor:pointer;transition:all .15s;background:var(--white);color:var(--text-mid);user-select:none}
+.ftag:hover{border-color:var(--accent)}
+.ftag.on{background:var(--navy);color:var(--white);border-color:var(--navy)}
+.toolbar-right{margin-left:auto;display:flex;gap:8px}
+.btn{padding:7px 14px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:11px;cursor:pointer;background:var(--white);color:var(--text-mid);transition:all .15s}
+.btn:hover{border-color:var(--accent);color:var(--text)}
+.btn-primary{background:var(--accent);color:var(--white);border-color:var(--accent)}
+.btn-primary:hover{filter:brightness(1.08)}
+
+/* report selector */
+.selector-panel{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.selector-title{font-size:10px;letter-spacing:1.5px;color:var(--text-soft);margin-bottom:10px}
+.report-list{display:flex;flex-direction:column;gap:6px}
+.report-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:7px;cursor:pointer;transition:all .15s;user-select:none}
+.report-item:hover{border-color:var(--accent);background:var(--accent-bg)}
+.report-item.selected{border-color:var(--navy);background:rgba(31,58,104,0.04)}
+.report-item input[type=checkbox]{accent-color:var(--navy);width:14px;height:14px;flex-shrink:0;cursor:pointer}
+.report-item .ri-name{font-size:12px;font-weight:500;flex:1}
+.report-item .ri-meta{font-size:10px;color:var(--text-soft);display:flex;gap:8px}
+.ri-badge{padding:1px 6px;border-radius:4px;font-size:10px;font-weight:500}
+.ri-pass{background:var(--green-bg);color:var(--green)}
+.ri-fail{background:var(--red-bg);color:var(--red)}
+
+/* table */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);background:var(--white)}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+th{padding:10px 12px;text-align:left;font-size:10px;letter-spacing:.5px;color:var(--text-soft);font-weight:500;background:var(--gray-bg);border-bottom:1px solid var(--border);white-space:nowrap}
+th:first-child{position:sticky;left:0;z-index:2;background:var(--gray-bg)}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+td:first-child{position:sticky;left:0;z-index:1;background:var(--white);font-weight:500;min-width:120px}
+tr:last-child td{border-bottom:none}
+tr.spec-row td{background:var(--spec-bg)!important;font-size:11px;color:var(--text-mid)}
+tr.spec-row td:first-child{background:var(--spec-bg)!important}
+tr:hover:not(.spec-row) td{background:rgba(212,165,116,0.04)}
+tr:hover:not(.spec-row) td:first-child{background:rgba(212,165,116,0.04)}
+
+.cell-fail{color:var(--red);font-weight:600}
+.cell-pass{color:var(--green)}
+.cell-warn{color:var(--amber)}
+.cell-empty{color:var(--text-soft);font-style:italic;font-size:11px}
+.overall-fail{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--red-bg);color:var(--red);font-size:10px;font-weight:600}
+.overall-pass{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600}
+
+/* editable */
+.editable{cursor:text;border-bottom:1px dashed var(--border);padding-bottom:1px}
+.editable:hover{border-bottom-color:var(--accent)}
+.editing-input{width:100%;padding:3px 6px;border:1px solid var(--accent);border-radius:4px;font-family:inherit;font-size:12px;color:var(--text);background:var(--white);outline:none}
+
+/* empty */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-soft)}
+.empty-state .icon{font-family:"Cormorant Garamond",serif;font-size:32px;color:var(--accent);opacity:.4;margin-bottom:10px}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:9px 20px;border-radius:8px;font-size:12px;font-weight:500;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <div class="meta">FRONTIER · COMMERCIAL</div>
+  <h1>面料检测报告 <em>对比</em></h1>
+</div>
+
+<div class="page">
+
+  <!-- toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-label">款号</span>
+    <div class="filter-tags" id="skuTags"></div>
+    <div class="toolbar-right">
+      <button class="btn" onclick="selectAll()">全选当前款</button>
+      <button class="btn" onclick="clearAll()">清空选择</button>
+      <button class="btn btn-primary" onclick="exportCSV()">导出 CSV</button>
+    </div>
+  </div>
+
+  <!-- report selector -->
+  <div class="selector-panel">
+    <div class="selector-title">选择要对比的报告</div>
+    <div class="report-list" id="reportList"></div>
+  </div>
+
+  <!-- table -->
+  <div class="table-wrap" id="tableWrap">
+    <div class="empty-state">
+      <div class="icon">◇</div>
+      <p>请从上方选择要对比的报告</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── MOCK DATA ──
+// Spec rows (手动维护，报告里没有这些字段)
+const SPECS = {
+  'SN583': {
+    label: 'SN583 W/O Silicone — Spec（客样）',
+    supplier: '—',
+    fiber: '75% NY 25% SP',
+    construction: '50D/24F sd fdy PA +280D PU',
+    density: '—',
+    weight: '160gsm',
+    bursting: 'Min.45 / 客样51.9',
+    elong_l: 'Min 113%, Mid 126–139%',
+    recov_l: 'Min. 85%',
+    elong_w: 'Min/Max 86–105%',
+    recov_w: 'Min. 85%',
+  },
+  'SN584': {
+    label: 'SN584 With Silicone — Spec（客样）',
+    supplier: '—',
+    fiber: '75% NY 25% SP',
+    construction: '—',  // 待补
+    density: '—',       // 待补
+    weight: '160gsm',
+    bursting: 'Min. 45',
+    elong_l: '—',
+    recov_l: 'Min. 85%',
+    elong_w: '—',
+    recov_w: 'Min. 85%',
+  },
+};
+
+// Report data extracted from MD files
+const REPORTS = [
+  {
+    id: 'r1',
+    sku: 'SN583',
+    report_no: '(9325)347-0792',
+    date: '2025-12-19',
+    version: '',
+    overall: 'FAIL',
+    supplier: '',
+    fiber: '74.8% NY 25.2% SP',
+    construction: '',
+    density: '',
+    weight: '163.944',
+    bursting: '43.4',
+    bursting_pass: false,
+    elong_l: '172.2%',
+    recov_l: '97.6%',
+    elong_w: '80.5%',
+    recov_w: '92.3%',
+  },
+  {
+    id: 'r2',
+    sku: 'SN583',
+    report_no: '(9326)058-0023',
+    date: '2026-03-02',
+    version: '',
+    overall: 'FAIL',
+    supplier: '',
+    fiber: '73.7% NY 26.3% SP',
+    construction: '',
+    density: '',
+    weight: '160.54',
+    bursting: '40.6',
+    bursting_pass: false,
+    elong_l: '182.0%',
+    recov_l: '97.2%',
+    elong_w: '109.5%',
+    recov_w: '96.3%',
+  },
+  {
+    id: 'r3',
+    sku: 'SN583',
+    report_no: '(9326)097-1971',
+    date: '2026-04-14',
+    version: '',
+    overall: 'FAIL',
+    supplier: '',
+    fiber: '72.8% NY 27.2% SP',
+    construction: '',
+    density: '',
+    weight: '160.843',
+    bursting: '41.8',
+    bursting_pass: false,
+    elong_l: '127.5%',
+    recov_l: '97.6%',
+    elong_w: '87.2%',
+    recov_w: '95.3%',
+  },
+  {
+    id: 'r4',
+    sku: 'SN584',
+    report_no: '(9325)347-0790',
+    date: '2025-12-24',
+    version: '',
+    overall: 'PASS',
+    supplier: '',
+    fiber: '74.7% NY 25.3% SP',
+    construction: '',
+    density: '',
+    weight: '160.043',
+    bursting: '51.9',
+    bursting_pass: true,
+    elong_l: '179.3%',
+    recov_l: '97.7%',
+    elong_w: '103.6%',
+    recov_w: '94.1%',
+  },
+  {
+    id: 'r5',
+    sku: 'SN584',
+    report_no: '(9326)058-0026',
+    date: '2026-03-02',
+    version: '',
+    overall: 'FAIL',
+    supplier: '',
+    fiber: '73.3% NY 26.7% SP',
+    construction: '',
+    density: '',
+    weight: '158.343',
+    bursting: '36.9',
+    bursting_pass: false,
+    elong_l: '191.9%',
+    recov_l: '97.4%',
+    elong_w: '123.5%',
+    recov_w: '96.7%',
+  },
+  {
+    id: 'r6',
+    sku: 'SN584',
+    report_no: '(9326)097-1979',
+    date: '2026-04-14',
+    version: '',
+    overall: 'FAIL',
+    supplier: '',
+    fiber: '74.5% NY 25.5% SP',
+    construction: '',
+    density: '',
+    weight: '160.943',
+    bursting: '41.4',
+    bursting_pass: false,
+    elong_l: '139%',
+    recov_l: '97.8%',
+    elong_w: '97.4%',
+    recov_w: '95.8%',
+  },
+  {
+    id: 'r7',
+    sku: 'SN584',
+    report_no: '(9326)127-1701',
+    date: '2026-05-13',
+    version: '',
+    overall: 'PASS',
+    supplier: '',
+    fiber: '73.5% NY 26.5% SP',
+    construction: '',
+    density: '',
+    weight: '166.745',
+    bursting: '51.2',
+    bursting_pass: true,
+    elong_l: '155.9%',
+    recov_l: '97.4%',
+    elong_w: '91.9%',
+    recov_w: '95.6%',
+  },
+];
+
+// ── STATE ──
+let selectedSku = 'SN583';
+let selectedIds = new Set(['r1','r2','r3']);
+
+function buildSkuTags() {
+  const skus = [...new Set(REPORTS.map(r => r.sku))];
+  const c = document.getElementById('skuTags');
+  c.innerHTML = '';
+  skus.forEach(sku => {
+    const el = document.createElement('span');
+    el.className = 'ftag' + (sku === selectedSku ? ' on' : '');
+    el.textContent = sku;
+    el.onclick = () => { selectedSku = sku; selectedIds = new Set(); buildSkuTags(); buildReportList(); renderTable(); };
+    c.appendChild(el);
+  });
+}
+
+function buildReportList() {
+  const filtered = REPORTS.filter(r => r.sku === selectedSku);
+  const c = document.getElementById('reportList');
+  c.innerHTML = '';
+  filtered.forEach(r => {
+    const sel = selectedIds.has(r.id);
+    const el = document.createElement('div');
+    el.className = 'report-item' + (sel ? ' selected' : '');
+    el.innerHTML = `
+      <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleReport('${r.id}',this.checked)">
+      <span class="ri-name">${r.report_no} · ${r.version}</span>
+      <span class="ri-meta">
+        <span>${r.date}</span>
+        <span class="${r.overall==='PASS'?'ri-badge ri-pass':'ri-badge ri-fail'}">${r.overall}</span>
+      </span>`;
+    el.onclick = (e) => { if(e.target.tagName!=='INPUT') toggleReport(r.id, !selectedIds.has(r.id)); };
+    c.appendChild(el);
+  });
+}
+
+function toggleReport(id, val) {
+  if (val) selectedIds.add(id); else selectedIds.delete(id);
+  buildReportList();
+  renderTable();
+}
+
+function selectAll() {
+  REPORTS.filter(r => r.sku === selectedSku).forEach(r => selectedIds.add(r.id));
+  buildReportList(); renderTable();
+}
+function clearAll() { selectedIds.clear(); buildReportList(); renderTable(); }
+
+// ── TABLE ──
+const COLS = [
+  { key: 'report_no',    label: 'Test Report#',       editable: false },
+  { key: 'version',      label: 'Version',             editable: true  },
+  { key: 'supplier',     label: 'Supplier',            editable: true  },
+  { key: 'fiber',        label: 'Actual fiber content',editable: false },
+  { key: 'construction', label: 'Construction',        editable: true  },
+  { key: 'density',      label: '密度',                editable: true  },
+  { key: 'weight',       label: 'Weight GSM',          editable: false },
+  { key: 'bursting',     label: 'Bursting lbf',        editable: false },
+  { key: 'elong_l',      label: 'Elongation (L)',       editable: false },
+  { key: 'recov_l',      label: 'Recovery (L)',         editable: false },
+  { key: 'elong_w',      label: 'Elongation (W)',       editable: false },
+  { key: 'recov_w',      label: 'Recovery (W)',         editable: false },
+];
+
+// ── INIT ──
+buildSkuTags();
+buildReportList();
+renderTable();
+
+function renderTable() {
+  const selected = REPORTS.filter(r => selectedIds.has(r.id));
+  const wrap = document.getElementById('tableWrap');
+
+  if (!selected.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">◇</div><p>请从上方选择要对比的报告</p></div>';
+    return;
+  }
+
+  const spec = SPECS[selectedSku];
+  let html = '<table><thead><tr>';
+  html += '<th>项目</th>';
+  // spec col
+  html += '<th style="background:var(--spec-bg);color:var(--text-mid)">Spec 客样</th>';
+  selected.forEach(r => {
+    html += `<th>${r.report_no}<br><span style="font-weight:400;color:var(--text-soft)">${r.date}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  COLS.forEach(col => {
+    html += '<tr' + (col.key === 'report_no' ? '' : '') + '>';
+    html += `<td style="color:var(--text-soft);font-size:11px;font-weight:400">${col.label}</td>`;
+
+    // spec cell
+    const sv = spec[col.key] || '';
+    html += `<td class="spec-row" style="background:var(--spec-bg)"><span style="color:var(--text-mid)">${sv || '<span class="cell-empty">—</span>'}</span></td>`;
+
+    selected.forEach(r => {
+      const val = r[col.key] || '';
+      if (col.editable) {
+        html += `<td><span class="editable" ondblclick="startEdit(this,'${r.id}','${col.key}')">${val || '<span class="cell-empty">未填</span>'}</span></td>`;
+      } else if (col.key === 'bursting') {
+        const cls = r.bursting_pass ? 'cell-pass' : 'cell-fail';
+        html += `<td class="${cls}">${val}${r.bursting_pass ? '' : ' ✕'}</td>`;
+      } else if (col.key === 'weight') {
+        const w = parseFloat(val);
+        const cls = Math.abs(w - 160) / 160 > 0.05 ? 'cell-warn' : '';
+        html += `<td class="${cls}">${val ? val+'gsm' : '—'}</td>`;
+      } else if (col.key === 'report_no') {
+        const cls = r.overall === 'PASS' ? 'overall-pass' : 'overall-fail';
+        html += `<td>${val} <span class="${cls}">${r.overall}</span></td>`;
+      } else {
+        html += `<td>${val || '<span class="cell-empty">—</span>'}</td>`;
+      }
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ── INLINE EDIT ──
+function startEdit(el, id, key) {
+  const r = REPORTS.find(r => r.id === id);
+  if (!r) return;
+  const cur = r[key] || '';
+  const input = document.createElement('input');
+  input.className = 'editing-input';
+  input.value = cur;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  function save() {
+    r[key] = input.value.trim();
+    renderTable();
+    showToast('已保存');
+  }
+  input.addEventListener('keydown', e => { if(e.key==='Enter') save(); if(e.key==='Escape') renderTable(); });
+  input.addEventListener('blur', save);
+}
+
+// ── EXPORT CSV ──
+function exportCSV() {
+  const selected = REPORTS.filter(r => selectedIds.has(r.id));
+  if (!selected.length) { showToast('请先选择报告'); return; }
+  const spec = SPECS[selectedSku];
+  const headers = ['项目', 'Spec客样', ...selected.map(r => r.report_no+' '+r.version)];
+  const rows = COLS.map(col => [
+    col.label,
+    spec[col.key] || '',
+    ...selected.map(r => r[col.key] || '')
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${selectedSku}_对比_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('已导出');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
