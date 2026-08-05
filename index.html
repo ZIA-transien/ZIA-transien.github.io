@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frontier · 报价计算器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --accent:#D4A574;--accent-bg:rgba(212,165,116,0.10);
+  --cream:#F5F1EA;--white:#FFFFFF;
+  --text:#2C3E50;--text-mid:#4A5568;--text-soft:#94A3B8;
+  --border:#E2E8F0;--navy:#1F3A68;
+  --red:#B91C1C;--red-bg:#FEE2E2;
+  --green:#047857;--green-bg:#D1FAE5;
+  --amber:#B45309;--amber-bg:#FEF3C7;
+  --gray-bg:#F8F9FA;
+}
+html,body{font-family:"Noto Sans SC","PingFang SC",sans-serif;background:var(--cream);color:var(--text);font-size:13px;line-height:1.6}
+
+.page-head{text-align:center;padding:28px 24px 20px;background:linear-gradient(180deg,var(--white) 0%,var(--cream) 100%);border-bottom:1px solid var(--border)}
+.page-head .meta{font-size:9px;letter-spacing:4px;color:var(--accent);font-weight:600;margin-bottom:6px}
+.page-head h1{font-family:"Cormorant Garamond",serif;font-size:32px;font-weight:600;color:var(--navy)}
+.page-head h1 em{font-style:italic;color:var(--accent)}
+.page-head .sub{font-size:11px;color:var(--text-soft);margin-top:4px}
+
+.page{max-width:1100px;margin:0 auto;padding:20px 20px 60px}
+.layout{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+@media(max-width:860px){.layout{grid-template-columns:1fr}}
+
+.panel{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.panel-head{padding:11px 16px;border-bottom:1px solid var(--border)}
+.panel-head .label{font-size:10px;letter-spacing:2px;color:var(--text-soft);font-weight:500}
+.panel-body{padding:16px}
+
+/* weave selector */
+.weave-tabs{display:flex;gap:6px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px dashed var(--border)}
+.weave-tab{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:12px;cursor:pointer;background:var(--white);color:var(--text-mid);transition:all .15s;text-align:center}
+.weave-tab:hover{border-color:var(--accent)}
+.weave-tab.on{background:var(--navy);color:var(--white);border-color:var(--navy)}
+
+/* style row */
+.style-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-bottom:14px}
+.weave-badge{display:inline-flex;align-items:center;padding:7px 12px;border-radius:6px;background:var(--accent-bg);border:1px solid rgba(212,165,116,0.3);font-size:11px;color:var(--accent);font-weight:500;white-space:nowrap}
+
+/* fields */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field-grid.three{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10px;color:var(--text-soft);letter-spacing:.5px}
+.field input,.field select{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;color:var(--text);background:var(--white);transition:border-color .15s}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg)}
+.field .unit{font-size:10px;color:var(--text-soft);margin-top:1px}
+
+.divider{margin:14px 0 12px;font-size:10px;letter-spacing:1.5px;color:var(--text-soft);display:flex;align-items:center;gap:8px}
+.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* process */
+.process-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.process-item{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);border-radius:7px;cursor:pointer;transition:all .15s}
+.process-item:hover{border-color:var(--accent)}
+.process-item.on{border-color:var(--navy);background:rgba(31,58,104,0.03)}
+.process-item input[type=checkbox]{accent-color:var(--navy);width:13px;height:13px;cursor:pointer;flex-shrink:0}
+.process-item .pname{font-size:12px;color:var(--text-mid)}
+.process-item.on .pname{color:var(--text);font-weight:500}
+.process-fee{display:flex;align-items:center;gap:4px}
+.process-fee input{width:64px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:11px;text-align:right}
+.process-fee .fee-unit{font-size:10px;color:var(--text-soft);white-space:nowrap}
+
+/* advanced */
+.adv-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text-soft);margin:14px 0 10px;user-select:none}
+.adv-toggle .arr{font-size:9px;transition:transform .2s}
+.adv-toggle.open .arr{transform:rotate(90deg)}
+.adv-body{display:none}
+.adv-body.open{display:block}
+.check-row{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--text-mid);margin-top:8px}
+.check-row input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+
+/* result */
+.result-panel{position:sticky;top:20px}
+.cost-hero{text-align:center;padding:18px 14px 14px;margin-bottom:12px;border-radius:8px;background:var(--navy)}
+.cost-hero .ch-label{font-size:9px;letter-spacing:3px;color:rgba(255,255,255,.45);margin-bottom:6px}
+.cost-hero .ch-price{font-family:"Cormorant Garamond",serif;font-size:42px;font-weight:600;color:var(--white);line-height:1}
+.cost-hero .ch-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:5px}
+
+.result-rows{display:flex;flex-direction:column}
+.rrow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.rrow:last-child{border-bottom:none}
+.rrow .rl{color:var(--text-soft)}
+.rrow .rv{font-weight:500;font-family:"Cormorant Garamond",serif;font-size:14px}
+
+.copy-btn{width:100%;padding:10px;background:var(--accent);color:var(--white);border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:filter .2s;margin-top:12px}
+.copy-btn:hover{filter:brightness(1.08)}
+.reset-btn{width:100%;padding:8px;background:transparent;color:var(--text-soft);border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:11px;cursor:pointer;margin-top:6px;transition:all .15s}
+.reset-btn:hover{border-color:var(--text-soft);color:var(--text-mid)}
+
+.empty-state{text-align:center;padding:32px 16px;color:var(--text-soft)}
+.empty-state .icon{font-family:"Cormorant Garamond",serif;font-size:28px;color:var(--accent);opacity:.4;margin-bottom:8px}
+.empty-state p{font-size:11px;line-height:1.9}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:9px 20px;border-radius:8px;font-size:12px;font-weight:500;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
+.toast.show{opacity:1}
+
+/* product list */
+.product-list{margin-top:16px}
+.plist-table{width:100%;border-collapse:collapse;font-size:11px}
+.plist-table th{text-align:left;padding:7px 8px;border-bottom:2px solid var(--navy);font-size:10px;letter-spacing:.5px;color:var(--text-soft);white-space:nowrap;position:sticky;top:0;background:var(--white)}
+.plist-table td{padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.plist-table .del-btn{color:var(--red);cursor:pointer;font-weight:600;background:none;border:none;font-size:14px;line-height:1;padding:0 2px}
+.plist-table .del-btn:hover{opacity:.7}
+.plist-actions{display:flex;gap:8px;padding:10px 0}
+.plist-actions button{padding:6px 14px;border:1px solid var(--border);border-radius:5px;background:var(--white);font-family:inherit;font-size:11px;cursor:pointer;color:var(--text-mid)}
+.plist-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.plist-actions .primary{background:var(--navy);color:var(--white);border-color:var(--navy)}
+.plist-actions .primary:hover{filter:brightness(1.15)}
+.preset-row{display:flex;gap:6px;margin-top:8px}
+.preset-btn{padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:var(--white);font-family:inherit;font-size:10px;cursor:pointer;color:var(--text-mid);transition:all .12s}
+.preset-btn:hover{border-color:var(--accent)}
+.preset-btn.on{background:var(--navy);color:var(--white);border-color:var(--navy)}
+.col-x{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:4px;border-radius:50%;background:var(--red-bg);color:var(--red);font-size:10px;cursor:pointer;line-height:1;transition:all .12s;vertical-align:middle}
+.col-x:hover{background:var(--red);color:var(--white)}
+.hidden-tags{display:flex;flex-wrap:wrap;gap:4px;padding:6px 0;font-size:10px;color:var(--text-soft);align-items:center}
+.hidden-tag{display:inline-block;padding:2px 8px;border:1px dashed var(--border);border-radius:4px;cursor:pointer;color:var(--text-soft);transition:all .12s}
+.hidden-tag:hover{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <div class="meta">FRONTIER · COMMERCIAL</div>
+  <h1>报价 <em>计算器</em></h1>
+  <div class="sub">FOB China 美元成本 · 实时计算</div>
+</div>
+
+<div class="page">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="panel">
+  <div class="panel-head"><span class="label">INPUT PARAMETERS</span></div>
+  <div class="panel-body">
+
+    <!-- 织造方式 tabs -->
+    <div class="weave-tabs">
+      <button class="weave-tab on" data-weave="weft"  onclick="setWeave('weft')">纬编</button>
+      <button class="weave-tab"   data-weave="warp"   onclick="setWeave('warp')">经编</button>
+      <button class="weave-tab"   data-weave="woven"  onclick="setWeave('woven')">梭织</button>
+      <button class="weave-tab"   data-weave="mesh"   onclick="setWeave('mesh')">常做网布</button>
+    </div>
+
+    <!-- 款号 -->
+    <div class="style-row">
+      <div class="field">
+        <label>产品款号（可选，自动识别织造）</label>
+        <input type="text" id="styleNo" placeholder="如 FR010758" oninput="onStyleInput()">
+      </div>
+      <div class="weave-badge" id="weaveBadge">纬编</div>
+    </div>
+
+    <!-- 主要参数 -->
+    <div class="field-grid three">
+      <div class="field">
+        <label>门幅 <span style="color:var(--accent)">*</span></label>
+        <input type="number" id="width" placeholder="148" oninput="calc()">
+        <span class="unit">cm</span>
+      </div>
+      <div class="field">
+        <label>克重 <span style="color:var(--accent)">*</span></label>
+        <input type="number" id="weight" placeholder="160" oninput="calc()">
+        <span class="unit">gsm</span>
+      </div>
+      <div class="field">
+        <label id="greyPriceLabel">胚布单价 <span style="color:var(--accent)">*</span></label>
+        <input type="number" id="greyPrice" placeholder="35.00" step="0.01" oninput="calc()">
+        <span class="unit" id="greyPriceUnit">¥/kg</span>
+      </div>
+    </div>
+
+    <!-- 梭织专用：Jcrew 参数 -->
+    <div id="wovenExtra" style="display:none">
+      <div class="divider">梭织成本参数（Jcrew 公式）</div>
+      <div class="weave-tabs" style="margin-bottom:12px;padding-bottom:0;border-bottom:none">
+        <button class="weave-tab on" data-dye="piece" onclick="setWovenDye('piece')">Piece Dye</button>
+        <button class="weave-tab"   data-dye="yarn"  onclick="setWovenDye('yarn')">Yarn Dye</button>
+      </div>
+      <div class="field-grid" id="wovenMOQRow">
+        <div class="field">
+          <label>MOQ(Y) <span style="color:var(--accent)">*</span></label>
+          <input type="number" id="wovenMOQ" value="2000" step="500" oninput="calc()">
+          <span class="unit">Y，默认 2000</span>
+        </div>
+      </div>
+      <div class="field-grid" id="wovenKgRow" style="display:none">
+        <div class="field">
+          <label>公斤数 <span style="color:var(--accent)">*</span></label>
+          <input type="number" id="wovenKg" value="3500" step="100" oninput="calc()">
+          <span class="unit">MOQ = 公斤数 / 0.9144</span>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>出码率计算（留空=自动）</label>
+          <input type="number" id="wovenYield2" value="" placeholder="自动" step="0.1" oninput="calc()">
+          <span class="unit">y/kg，自动用出码率</span>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>greige/kg <span style="color:var(--accent)">*</span></label>
+          <input type="number" id="wovenGreige" value="9" step="0.1" oninput="calc()">
+          <span class="unit"></span>
+        </div>
+        <div class="field">
+          <label>Dying fee（含金银丝） <span style="color:var(--accent)">*</span></label>
+          <input type="number" id="wovenDyeing" value="28" step="1" oninput="calc()">
+          <span class="unit"></span>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>汇率</label>
+          <input type="number" id="wovenExRate" value="6.8" step="0.01" oninput="calc()">
+          <span class="unit">¥/$，默认 6.8</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="standardParams">
+    <div class="divider">成本参数</div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>印染费</label>
+        <input type="number" id="dyeingFee" value="18" step="0.5" oninput="calc()">
+        <span class="unit">¥/y，默认 18</span>
+      </div>
+      <div class="field">
+        <label>汇率</label>
+        <input type="number" id="exchangeRate" value="7" step="0.01" oninput="calc()">
+        <span class="unit">¥/$，默认 7</span>
+      </div>
+    </div>
+
+    <!-- 特殊工艺 -->
+    <div class="divider">特殊工艺（可调加工费）</div>
+    <div class="process-list" id="processList"></div>
+
+    <!-- 高级参数 -->
+    <div class="divider">高级参数</div>
+    <div class="adv-body" id="advBody" style="display:block">
+      <div class="field-grid">
+        <div class="field" id="lossRow">
+          <label>损耗系数</label>
+          <input type="number" id="lossCoef" value="1.15" step="0.01" oninput="onLossManual()">
+          <span class="unit">默认 1.15</span>
+        </div>
+        <div class="field">
+          <label>港杂费</label>
+          <input type="number" id="portFee" value="3" step="0.5" oninput="calc()">
+          <span class="unit">¥/y，默认 3</span>
+        </div>
+      </div>
+      <div class="field-grid" style="margin-top:8px">
+        <div class="field">
+          <label>额外加工费</label>
+          <input type="number" id="extraFee" value="0" step="1" oninput="calc()">
+          <span class="unit">¥/y，默认 0</span>
+        </div>
+      </div>
+      <div class="preset-row">
+        <button class="preset-btn on" onclick="applyPreset('std',this)">标准</button>
+        <button class="preset-btn" onclick="applyPreset('thick',this)">加厚</button>
+        <button class="preset-btn" onclick="applyPreset('high',this)">高成本</button>
+      </div>
+      <label class="check-row" id="plus5Row">
+        <input type="checkbox" id="widthPlus5" onchange="calc()">
+        门幅 +5cm 修正
+      </label>
+      <label class="check-row" id="lossManualRow">
+        <input type="checkbox" id="lossManual" onchange="onLossManualToggle()">
+        手动覆盖损耗系数
+      </label>
+      <label class="check-row">
+        含税价基准
+        <select id="taxBase" onchange="calc()" style="margin-left:6px;padding:2px 4px;border:1px solid var(--border);border-radius:3px;font-family:inherit;font-size:11px">
+          <option value="1.15">×1.15（制衣厂）</option>
+          <option value="1.20">×1.20（品牌）</option>
+        </select>
+      </label>
+    </div>
+    </div><!-- end standardParams -->
+
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="panel result-panel">
+  <div class="panel-head"><span class="label">COST RESULT</span></div>
+  <div id="resultContent">
+    <div class="empty-state">
+      <div class="icon">◇</div>
+      <p>填入门幅、克重<br>胚布单价后<br>自动计算</p>
+    </div>
+  </div>
+</div>
+
+  </div><!-- end layout -->
+
+  <!-- 产品清单 -->
+  <div class="panel product-list" id="productListPanel" style="display:none">
+    <div class="panel-head">
+      <span class="label">PRODUCT LIST</span>
+    </div>
+    <div class="panel-body" style="padding:0 16px">
+      <div class="plist-actions">
+        <button class="primary" onclick="copyProductList()">复制清单</button>
+        <button class="primary" onclick="exportToExcel()" style="background:#047857;border-color:#047857">导出 Excel</button>
+        <input type="text" id="exportFileName" value="" placeholder="文件名（可选）" style="padding:6px 10px;border:1px solid var(--border);border-radius:5px;font-family:inherit;font-size:11px;width:180px" onfocus="if(!this.value){this.value='报价清单_'+new Date().toISOString().slice(0,10).replace(/-/g,'')}">
+        <button onclick="clearProductList()">清空</button>
+        <button id="editColumnsBtn" onclick="toggleEditMode()" style="background:transparent;color:var(--text-mid);border:1px dashed var(--border)">编辑字段</button>
+      </div>
+      <div style="overflow-x:auto" id="plistTableWrap"></div>
+      <div class="hidden-tags" id="hiddenTags" style="display:none"></div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 织造方式状态 ──
+let weaveMode = 'weft'; // weft | warp | woven | mesh
+let wovenDyeMode = 'piece'; // piece | yarn
+let weaveFromStyle = null;
+let lossManualMode = false;
+let productList = [];
+let editMode = false;
+
+const weaveLabels = { weft:'纬编', warp:'经编', woven:'梭织', mesh:'常做网布' };
+
+const COLUMN_DEFS = [
+  { key:'styleNo',   label:'款号',    get:p => p.styleNo,                                     always:true  },
+  { key:'weaveMode', label:'织造',    get:p => weaveLabels[p.weaveMode]||p.weaveMode,          always:true  },
+  { key:'width',     label:'门幅',    get:p => p.width                                                      },
+  { key:'gsm',       label:'克重',    get:p => p.gsm                                                        },
+  { key:'greyPrice', label:'胚布',    get:p => p.greyPrice                                                 },
+  { key:'yieldCalc', label:'出码率',  get:p => p.yieldCalc                                                 },
+  { key:'costUSD',   label:'成本$/y', get:p => '$'+p.costUSD.toFixed(2)                                    },
+  { key:'moq',       label:'MOQ',     get:p => Math.round(p.moq).toLocaleString()                          },
+  { key:'mcq',       label:'MCQ',     get:p => Math.round(p.mcq).toLocaleString()                          },
+  { key:'p115',      label:'×1.15',   get:p => '$'+(p.costUSD*1.15).toFixed(2)                             },
+  { key:'p120',      label:'×1.20',   get:p => '$'+(p.costUSD*1.20).toFixed(2)                             },
+  { key:'p125',      label:'×1.25',   get:p => '$'+(p.costUSD*1.25).toFixed(2)                             },
+  { key:'taxIncl',   label:'含税¥',   get:p => '¥'+(p.costUSD*(p.taxBase||1.15)*p.exRate*1.13).toFixed(2) },
+];
+let columnHidden = {};
+
+// 款号识别
+const WEAVE_MAP = [
+  { prefix: '010', mode: 'weft',  label: '纬编',  minKg: 500  },
+  { prefix: '110', mode: 'warp',  label: '经编',  minKg: 1000 },
+  { prefix: '120', mode: 'weft',  label: '纬编',  minKg: 500  },
+  { prefix: '200', mode: 'weft',  label: '肌理',  minKg: 500  },
+  { prefix: '220', mode: 'woven', label: '梭织',  minKg: 1000 },
+];
+
+// 特殊工艺定义（可调费用）
+const PROCESSES = [
+  { id: 'print',    name: '印花',    defaultFee: 10,  lossCoef: 1.20, unit: '¥/y' },
+  { id: 'foil',     name: '烫金',    defaultFee: 8,   lossCoef: 1.20, unit: '¥/y' },
+  { id: 'brushed',  name: '磨毛', defaultFee: 7,   lossCoef: 1.20, unit: '¥/y' },
+  { id: 'twocolor', name: '双染',    defaultFee: 28,  lossCoef: 1.15, unit: '¥/y（替代印染费）' },
+];
+let processFees = {}; // id → fee value (user editable)
+PROCESSES.forEach(p => { processFees[p.id] = p.defaultFee; });
+
+// ── 初始化 ──
+buildProcessList();
+updateWeaveUI();
+
+function buildProcessList() {
+  const c = document.getElementById('processList');
+  c.innerHTML = '';
+  PROCESSES.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'process-item';
+    el.id = 'proc_' + p.id;
+    el.innerHTML = `
+      <input type="checkbox" id="chk_${p.id}" onchange="onProcessChange()">
+      <span class="pname">${p.name}</span>
+      <div class="process-fee">
+        <input type="number" id="fee_${p.id}" value="${p.defaultFee}" step="0.5"
+          onclick="event.stopPropagation()"
+          oninput="processFees['${p.id}']=parseFloat(this.value)||0;calc()">
+        <span class="fee-unit">${p.unit}</span>
+      </div>`;
+    el.onclick = (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const chk = document.getElementById('chk_' + p.id);
+      chk.checked = !chk.checked;
+      onProcessChange();
+    };
+    c.appendChild(el);
+  });
+}
+
+function onProcessChange() {
+  PROCESSES.forEach(p => {
+    const el = document.getElementById('proc_' + p.id);
+    const on = document.getElementById('chk_' + p.id).checked;
+    el.classList.toggle('on', on);
+  });
+  if (!lossManualMode) autoLoss();
+  calc();
+}
+
+function getActiveProcesses() {
+  return PROCESSES.filter(p => document.getElementById('chk_' + p.id)?.checked);
+}
+
+function autoLoss() {
+  const active = getActiveProcesses();
+  let coef = 1.15;
+  active.forEach(p => { if (p.lossCoef && p.lossCoef > coef) coef = p.lossCoef; });
+  document.getElementById('lossCoef').value = coef;
+}
+
+function applyPreset(type, btn) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  const presets = {
+    std:   { dyeing: 18, loss: 1.15, extra: 0 },
+    thick: { dyeing: 20, loss: 1.20, extra: 8 },
+    high:  { dyeing: 28, loss: 1.15, extra: 0 },
+  };
+  const p = presets[type];
+  document.getElementById('dyeingFee').value = p.dyeing;
+  document.getElementById('lossCoef').value = p.loss;
+  document.getElementById('extraFee').value = p.extra;
+  lossManualMode = true;
+  document.getElementById('lossManual').checked = true;
+  calc();
+}
+
+function onLossManual() {
+  lossManualMode = true;
+  document.getElementById('lossManual').checked = true;
+  calc();
+}
+function onLossManualToggle() {
+  lossManualMode = document.getElementById('lossManual').checked;
+  if (!lossManualMode) autoLoss();
+  calc();
+}
+
+// ── 织造切换 ──
+function setWeave(mode) {
+  weaveMode = mode;
+  weaveFromStyle = null;
+  updateWeaveUI();
+  calc();
+}
+
+function setWovenDye(mode) {
+  wovenDyeMode = mode;
+  document.querySelectorAll('#wovenExtra .weave-tab').forEach(t => t.classList.toggle('on', t.dataset.dye === mode));
+  document.getElementById('wovenMOQRow').style.display = mode === 'piece' ? '' : 'none';
+  document.getElementById('wovenKgRow').style.display = mode === 'yarn' ? '' : 'none';
+  calc();
+}
+
+function updateWeaveUI() {
+  document.querySelectorAll('.weave-tab').forEach(t => t.classList.toggle('on', t.dataset.weave === weaveMode));
+  const badge = document.getElementById('weaveBadge');
+  const labels = { weft:'纬编', warp:'经编', woven:'梭织', mesh:'常做网布' };
+  badge.textContent = labels[weaveMode];
+
+  const isWoven = weaveMode === 'woven';
+  const isMesh = weaveMode === 'mesh';
+  document.getElementById('wovenExtra').style.display = isWoven ? 'block' : 'none';
+  document.getElementById('standardParams').style.display = (isWoven || isMesh) ? 'none' : 'block';
+  // 常做网布隐藏主参数
+  document.querySelectorAll('#width, #weight, #greyPrice').forEach(el => {
+    el.parentElement.style.display = isMesh ? 'none' : '';
+  });
+
+  const priceLabel = document.getElementById('greyPriceLabel');
+  const priceUnit  = document.getElementById('greyPriceUnit');
+  if (isWoven) {
+    priceLabel.innerHTML = '胚布单价（参考）';
+    priceUnit.textContent = '$/y';
+  } else if (isMesh) {
+    priceLabel.innerHTML = '胚布单价';
+    priceUnit.textContent = '—';
+  } else {
+    priceLabel.innerHTML = '胚布单价 <span style="color:var(--accent)">*</span>';
+    priceUnit.textContent = '¥/kg';
+  }
+}
+
+function onStyleInput() {
+  const v = document.getElementById('styleNo').value.trim().toUpperCase();
+  const seg = v.slice(2, 5);
+  const match = WEAVE_MAP.find(m => seg === m.prefix);
+  if (match) {
+    weaveMode = match.mode;
+    weaveFromStyle = match;
+  } else {
+    weaveFromStyle = null;
+  }
+  updateWeaveUI();
+  calc();
+}
+
+function toggleAdv() {
+  const t = document.getElementById('advToggle');
+  const b = document.getElementById('advBody');
+  t.classList.toggle('open');
+  b.classList.toggle('open');
+}
+
+// ── 截断函数 ──
+function trunc2(n) { return Math.floor(n * 100) / 100; } // 截断到2位
+function trunc1(n) { return Math.floor(n * 10)  / 10;  } // 截断到1位
+function roundToNearest500(yards) {
+  const rem = yards % 1000;
+  if (rem >= 500) return (Math.floor(yards / 1000) + 1) * 1000;
+  if (rem > 0)    return Math.floor(yards / 1000) * 1000 + 500;
+  return yards;
+}
+function roundMCQ(val) {
+  // Excel K列: IF(MOD(INT(J/10),10)>=5, (INT(J/100)+1)*100,
+  //            IF(MOD(INT(J/10),10)>0, INT(J/100)*100+50, J))
+  const tens = Math.floor(val / 10) % 10;
+  if (tens >= 5) return (Math.floor(val / 100) + 1) * 100;
+  if (tens > 0)  return Math.floor(val / 100) * 100 + 50;
+  return val;
+}
+
+// ── 核心计算 ──
+function calc() {
+  const widthCm   = parseFloat(document.getElementById('width').value);
+  const gsm       = parseFloat(document.getElementById('weight').value);
+  const greyPrice = parseFloat(document.getElementById('greyPrice').value);
+  const dyeingFee = parseFloat(document.getElementById('dyeingFee').value) || 18;
+  const portFee   = parseFloat(document.getElementById('portFee').value) || 3;
+  const exRate    = parseFloat(document.getElementById('exchangeRate').value) || 7;
+
+  if (weaveMode === 'mesh') {
+    // 常做网布：MOQ 固定 5000，不计算成本
+    const content = document.getElementById('resultContent');
+    content.innerHTML = `
+      <div style="padding:16px">
+        <div class="cost-hero">
+          <div class="ch-label">常做网布</div>
+          <div class="ch-price">5,000 Y</div>
+          <div class="ch-sub">MOQ 固定</div>
+        </div>
+        <div class="result-rows">
+          <div class="rrow"><span class="rl">MOQ</span><span class="rv">5,000 Y</span></div>
+        </div>
+        <button class="copy-btn" onclick="addToList()" style="margin-bottom:6px">添加到清单</button>
+        <button class="reset-btn" onclick="resetAll()">重置</button>
+      </div>`;
+    window._lastResult = { yieldCalc: '—', costUSD: 0, moq: 5000, mcq: 0, exRate: 7, isWoven: false };
+    return;
+  }
+
+  if (!widthCm || !gsm) { showEmpty(); return; }
+
+  let yieldFull, yieldCalc, costCNY;
+
+  if (weaveMode === 'woven') {
+    // 梭织 Jcrew 公式
+    const wgreige  = parseFloat(document.getElementById('wovenGreige').value);  // Q: greige/kg
+    const wdyeing  = parseFloat(document.getElementById('wovenDyeing').value);  // R: Dying fee
+    const wexRate  = parseFloat(document.getElementById('wovenExRate').value) || 6.8;
+
+    if (!widthCm || !gsm || !wgreige || !wdyeing) { showEmpty(); return; }
+
+    yieldFull = 100000 / widthCm / gsm / 0.9144;
+    yieldCalc = trunc1(yieldFull); // 梭织截断到1位
+
+    // P: 出码率计算 — 不手填则自动用计算值
+    const wyield2Raw = document.getElementById('wovenYield2').value;
+    const wyield2 = wyield2Raw !== '' ? parseFloat(wyield2Raw) : yieldCalc;
+
+    // S = ((Q/0.45) + (R+3)/P) / 汇率
+    const costUSD = ((wgreige / 0.45) + (wdyeing + 3) / wyield2) / wexRate;
+
+    let moq, mcq;
+    if (wovenDyeMode === 'yarn') {
+      // Yarn Dye: H = E/0.9144, K = 3600/0.9144
+      const wovenKg = parseFloat(document.getElementById('wovenKg').value) || 0;
+      if (!wovenKg) { showEmpty(); return; }
+      moq = roundToNearest500(wovenKg / 0.9144);
+      mcq = roundMCQ(3600 / 0.9144);
+    } else {
+      // Piece Dye: H 手填, K = 80*yield
+      const moqRaw = parseFloat(document.getElementById('wovenMOQ').value) || 0;
+      moq = roundToNearest500(moqRaw);
+      mcq = roundMCQ(80 * yieldCalc);
+    }
+
+    renderWovenResult({ yieldFull, yieldCalc, costUSD, moq, mcq, wexRate });
+    return;
+
+  } else {
+    // 纬编 / 经编
+    if (!greyPrice) { showEmpty(); return; }
+    const lossCoef = parseFloat(document.getElementById('lossCoef').value) || 1.15;
+    const plus5    = document.getElementById('widthPlus5').checked;
+    const effectiveWidth = plus5 ? widthCm + 5 : widthCm;
+
+    yieldFull = 100000 / effectiveWidth / gsm / 0.9144;
+    yieldCalc = trunc2(yieldFull); // 纬编/经编截断到2位
+
+    // 特殊工艺
+    const active = getActiveProcesses();
+    let effectiveDyeing = dyeingFee;
+    let extraFee = 0;
+    active.forEach(p => {
+      if (p.id === 'twocolor') {
+        effectiveDyeing = processFees[p.id]; // 替代印染费
+      } else {
+        extraFee += processFees[p.id];
+      }
+    });
+
+    const manualExtra = parseFloat(document.getElementById('extraFee').value) || 0;
+
+    costCNY = ((greyPrice + effectiveDyeing) * lossCoef + portFee) / yieldCalc + extraFee + manualExtra;
+  }
+
+  const costUSD = costCNY / exRate;
+
+  // MOQ / MCQ
+  const minKg = weaveFromStyle ? weaveFromStyle.minKg : (weaveMode === 'warp' ? 1000 : 500);
+  const moq = roundToNearest500(minKg * yieldCalc);
+  const mcq = roundMCQ(80 * yieldCalc);
+
+  const taxBase = parseFloat(document.getElementById('taxBase').value) || 1.15;
+  renderResult({ yieldFull, yieldCalc, costCNY, costUSD, moq, mcq, exRate, taxBase });
+}
+
+function renderResult(r) {
+  const content = document.getElementById('resultContent');
+  content.innerHTML = `
+    <div style="padding:16px">
+      <div class="cost-hero">
+        <div class="ch-label">美金成本价</div>
+        <div class="ch-price">$${r.costUSD.toFixed(2)}</div>
+        <div class="ch-sub">/ yard · FOB China</div>
+      </div>
+      <div class="result-rows">
+        <div class="rrow">
+          <span class="rl">出码率（全精度）</span>
+          <span class="rv">${r.yieldFull.toFixed(2)} y/kg</span>
+        </div>
+        <div class="rrow">
+          <span class="rl">出码率（计算用）</span>
+          <span class="rv">${r.yieldCalc} y/kg</span>
+        </div>
+        <div class="rrow">
+          <span class="rl">成本 ¥/y</span>
+          <span class="rv">¥${r.costCNY.toFixed(2)}</span>
+        </div>
+        <div style="height:8px"></div>
+        <div class="rrow"><span class="rl">MOQ</span><span class="rv">${r.moq.toLocaleString()} Y</span></div>
+        <div class="rrow"><span class="rl">MCQ</span><span class="rv">${r.mcq.toLocaleString()} Y</span></div>
+        <div class="divider">价格档位</div>
+        <div class="rrow"><span class="rl">×1.15</span><span class="rv">$${(r.costUSD * 1.15).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">×1.20</span><span class="rv">$${(r.costUSD * 1.20).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">×1.25</span><span class="rv">$${(r.costUSD * 1.25).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">×1.30</span><span class="rv">$${(r.costUSD * 1.30).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">×1.40</span><span class="rv">$${(r.costUSD * 1.40).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">含税 ¥/y (×${r.taxBase.toFixed(2)})</span><span class="rv">¥${(r.costUSD * r.taxBase * r.exRate * 1.13).toFixed(2)}</span></div>
+      </div>
+      <button class="copy-btn" onclick="addToList()" style="margin-bottom:6px">添加到清单</button>
+      <button class="copy-btn" onclick="copyResult()" style="background:var(--text-mid);margin-bottom:6px">复制单条</button>
+      <button class="reset-btn" onclick="resetAll()">重置</button>
+    </div>`;
+  window._lastResult = r;
+}
+
+function renderWovenResult(r) {
+  const content = document.getElementById('resultContent');
+  content.innerHTML = `
+    <div style="padding:16px">
+      <div class="cost-hero">
+        <div class="ch-label">美金成本价</div>
+        <div class="ch-price">$${r.costUSD.toFixed(2)}</div>
+        <div class="ch-sub">/ yard · FOB China</div>
+      </div>
+      <div class="result-rows">
+        <div class="rrow">
+          <span class="rl">出码率（全精度）</span>
+          <span class="rv">${r.yieldFull.toFixed(2)} y/kg</span>
+        </div>
+        <div class="rrow">
+          <span class="rl">出码率（计算用）</span>
+          <span class="rv">${r.yieldCalc} y/kg</span>
+        </div>
+        <div class="rrow">
+          <span class="rl">成本 $/y</span>
+          <span class="rv">$${r.costUSD.toFixed(2)}</span>
+        </div>
+        <div style="height:8px"></div>
+        <div class="rrow"><span class="rl">MOQ</span><span class="rv">${r.moq.toLocaleString()} Y</span></div>
+        <div class="rrow"><span class="rl">MCQ</span><span class="rv">${Math.round(r.mcq)} Y</span></div>
+        <div class="divider">价格档位</div>
+        <div class="rrow"><span class="rl">×1.20</span><span class="rv">$${(r.costUSD * 1.20).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">×1.25</span><span class="rv">$${(r.costUSD * 1.25).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">×1.30</span><span class="rv">$${(r.costUSD * 1.30).toFixed(2)}</span></div>
+        <div class="rrow"><span class="rl">×1.40</span><span class="rv">$${(r.costUSD * 1.40).toFixed(2)}</span></div>
+      </div>
+      <button class="copy-btn" onclick="addToList()" style="margin-bottom:6px">添加到清单</button>
+      <button class="copy-btn" onclick="copyResult()" style="background:var(--text-mid);margin-bottom:6px">复制单条</button>
+      <button class="reset-btn" onclick="resetAll()">重置</button>
+    </div>`;
+  window._lastResult = { ...r, isWoven: true };
+}
+
+function showEmpty() {
+  document.getElementById('resultContent').innerHTML = `
+    <div class="empty-state">
+      <div class="icon">◇</div>
+      <p>填入门幅、克重<br>胚布单价后<br>自动计算</p>
+    </div>`;
+  window._lastResult = null;
+}
+
+function copyResult() {
+  if (!window._lastResult) return;
+  const r = window._lastResult;
+  const styleNo = document.getElementById('styleNo').value || '—';
+  const weaveLabel = { weft:'纬编', warp:'经编', woven:'梭织', mesh:'常做网布' }[weaveMode];
+
+  let lines;
+  if (weaveMode === 'mesh') {
+    lines = [
+      `款号：${styleNo}`,
+      `织造：常做网布`,
+      `MOQ：5,000 Y`,
+    ];
+  } else if (r.isWoven) {
+    lines = [
+      `款号：${styleNo}`,
+      `织造：${weaveLabel}`,
+      `出码率：${r.yieldFull.toFixed(2)} → 计算用 ${r.yieldCalc} y/kg`,
+      `成本：$${r.costUSD.toFixed(2)}/y`,
+      `MOQ：${r.moq.toLocaleString()} Y  |  MCQ：${Math.round(r.mcq)} Y`,
+      `×1.20：$${(r.costUSD * 1.20).toFixed(2)}  |  ×1.25：$${(r.costUSD * 1.25).toFixed(2)}  |  ×1.30：$${(r.costUSD * 1.30).toFixed(2)}  |  ×1.40：$${(r.costUSD * 1.40).toFixed(2)}`,
+    ];
+  } else {
+    lines = [
+      `款号：${styleNo}`,
+      `织造：${weaveLabel}`,
+      `出码率：${r.yieldFull.toFixed(2)} → 计算用 ${r.yieldCalc} y/kg`,
+      `成本：¥${r.costCNY.toFixed(2)}/y  →  $${r.costUSD.toFixed(2)}/y`,
+      `MOQ：${r.moq.toLocaleString()} Y  |  MCQ：${r.mcq.toLocaleString()} Y`,
+      `×1.15：$${(r.costUSD * 1.15).toFixed(2)}  |  ×1.20：$${(r.costUSD * 1.20).toFixed(2)}  |  ×1.25：$${(r.costUSD * 1.25).toFixed(2)}  |  ×1.30：$${(r.costUSD * 1.30).toFixed(2)}  |  ×1.40：$${(r.costUSD * 1.40).toFixed(2)}`,
+      `含税(×${r.taxBase.toFixed(2)})：¥${(r.costUSD * r.taxBase * r.exRate * 1.13).toFixed(2)}/y`,
+    ];
+  }
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const t = document.getElementById('toast');
+    t.textContent = '已复制';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  });
+}
+
+// ── 产品清单 ──
+function addToList() {
+  if (!window._lastResult) return;
+  const r = window._lastResult;
+  const styleNo = document.getElementById('styleNo').value || '—';
+  const widthCm  = parseFloat(document.getElementById('width').value) || '';
+  const gsm      = parseFloat(document.getElementById('weight').value) || '';
+
+  let greyPrice = '';
+  if (weaveMode === 'woven') {
+    greyPrice = document.getElementById('greyPrice').value || '';
+  } else {
+    greyPrice = parseFloat(document.getElementById('greyPrice').value) || '';
+  }
+
+  const taxBase = parseFloat(document.getElementById('taxBase')?.value) || 1.15;
+  productList.push({
+    styleNo, weaveMode: weaveMode,
+    width: widthCm, gsm, greyPrice,
+    yieldCalc: r.yieldCalc, costUSD: r.costUSD,
+    moq: r.moq, mcq: r.mcq,
+    exRate: r.exRate || r.wexRate,
+    taxBase: r.taxBase || taxBase,
+    isWoven: r.isWoven
+  });
+  renderProductList();
+  const t = document.getElementById('toast');
+  t.textContent = '已添加到清单';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+function removeFromList(idx) {
+  productList.splice(idx, 1);
+  renderProductList();
+}
+
+function clearProductList() {
+  productList = [];
+  renderProductList();
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  const btn = document.getElementById('editColumnsBtn');
+  if (editMode) {
+    btn.style.background = 'var(--navy)';
+    btn.style.color = 'var(--white)';
+    btn.style.borderColor = 'var(--navy)';
+    btn.textContent = '完成编辑';
+  } else {
+    btn.style.background = 'transparent';
+    btn.style.color = 'var(--text-mid)';
+    btn.style.border = '1px dashed var(--border)';
+    btn.textContent = '编辑字段';
+  }
+  renderProductList();
+}
+
+function hideColumn(key) {
+  columnHidden[key] = true;
+  renderProductList();
+}
+
+function restoreColumn(key) {
+  columnHidden[key] = false;
+  renderProductList();
+}
+
+function renderProductList() {
+  const panel = document.getElementById('productListPanel');
+  const wrap = document.getElementById('plistTableWrap');
+  const tagsEl = document.getElementById('hiddenTags');
+  if (productList.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  const visible = COLUMN_DEFS.filter(c => !columnHidden[c.key]);
+  const hidden = COLUMN_DEFS.filter(c => columnHidden[c.key] && !c.always);
+
+  let html = '<table class="plist-table"><thead><tr>';
+  visible.forEach(c => {
+    html += `<th>${c.label}`;
+    if (editMode && !c.always) {
+      html += `<span class="col-x" onclick="event.stopPropagation();hideColumn('${c.key}')">×</span>`;
+    }
+    html += '</th>';
+  });
+  html += '<th></th></tr></thead><tbody>';
+
+  productList.forEach((p, i) => {
+    html += '<tr>';
+    visible.forEach(c => { html += `<td>${c.get(p)}</td>`; });
+    html += `<td><button class="del-btn" onclick="removeFromList(${i})">×</button></td></tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+
+  // hidden column tags
+  if (editMode && hidden.length > 0) {
+    tagsEl.style.display = 'flex';
+    tagsEl.innerHTML = '<span>已隐藏：</span>' + hidden.map(c =>
+      `<span class="hidden-tag" onclick="restoreColumn('${c.key}')">+ ${c.label}</span>`
+    ).join('');
+  } else {
+    tagsEl.style.display = 'none';
+  }
+}
+
+function copyProductList() {
+  if (productList.length === 0) return;
+  const visible = COLUMN_DEFS.filter(c => !columnHidden[c.key]);
+  const header = visible.map(c => c.label).join('\t');
+  const rows = productList.map(p => visible.map(c => c.get(p).replace(/^\$|^¥/,'')).join('\t'));
+  navigator.clipboard.writeText(header + '\n' + rows.join('\n')).then(() => {
+    const t = document.getElementById('toast');
+    t.textContent = `已复制 ${productList.length} 行`;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  });
+}
+
+function exportToExcel() {
+  if (productList.length === 0) return;
+  const visible = COLUMN_DEFS.filter(c => !columnHidden[c.key]);
+  const headers = visible.map(c => c.label);
+  const rows = productList.map(p => visible.map(c => c.get(p).replace(/^\$|^¥/,'')));
+
+  const BOM = '﻿';
+  const csvContent = BOM + headers.join(',') + '\n' +
+    rows.map(r => r.map(c => /[,"\n]/.test(String(c)) ? '"' + String(c).replace(/"/g,'""') + '"' : c).join(',')).join('\n');
+
+  let filename = document.getElementById('exportFileName').value.trim();
+  if (!filename) {
+    filename = '报价清单_' + new Date().toISOString().slice(0,10).replace(/-/g,'');
+  }
+  if (!filename.endsWith('.csv')) filename += '.csv';
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  const t = document.getElementById('toast');
+  t.textContent = '已导出 ' + filename;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function resetAll() {
+  document.getElementById('styleNo').value = '';
+  document.getElementById('width').value = '';
+  document.getElementById('weight').value = '';
+  document.getElementById('greyPrice').value = '';
+  document.getElementById('dyeingFee').value = '18';
+  document.getElementById('exchangeRate').value = '7';
+  document.getElementById('lossCoef').value = '1.15';
+  document.getElementById('portFee').value = '3';
+  document.getElementById('extraFee').value = '0';
+  document.getElementById('widthPlus5').checked = false;
+  document.getElementById('taxBase').value = '1.15';
+  document.getElementById('lossManual').checked = false;
+  document.getElementById('wovenMOQ').value = '2000';
+  document.getElementById('wovenYield2').value = '';
+  document.getElementById('wovenGreige').value = '9';
+  document.getElementById('wovenDyeing').value = '28';
+  document.getElementById('wovenExRate').value = '6.8';
+  document.getElementById('wovenKg').value = '3500';
+  wovenDyeMode = 'piece';
+  document.querySelectorAll('#wovenExtra .weave-tab').forEach(t => {
+    t.classList.toggle('on', t.dataset.dye === 'piece');
+  });
+  document.getElementById('wovenMOQRow').style.display = '';
+  document.getElementById('wovenKgRow').style.display = 'none';
+  PROCESSES.forEach(p => {
+    document.getElementById('chk_' + p.id).checked = false;
+    document.getElementById('fee_' + p.id).value = p.defaultFee;
+    document.getElementById('proc_' + p.id).classList.remove('on');
+    processFees[p.id] = p.defaultFee;
+  });
+  weaveMode = 'weft';
+  weaveFromStyle = null;
+  lossManualMode = false;
+  updateWeaveUI();
+  showEmpty();
+}
+</script>
+</body>
+</html>
